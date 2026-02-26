@@ -496,23 +496,17 @@
             <div class="card-title">Taxas e Tarifas</div>
           </div>
           <div class="card-body">
-            <div class="input-group">
-              <label class="input-label" for="taxaTusdInput">Taxa TUSD</label>
-              <div class="input-suffix" data-suffix="R$">
-                <input type="number" class="input-field" id="taxaTusdInput" value="0" min="0" max="5" step="0.01">
-              </div>
+            <div class="data-row">
+              <span class="data-label">Taxa TUSD</span>
+              <span class="data-value" id="taxaTusd">-</span>
             </div>
-            <div class="input-group">
-              <label class="input-label" for="taxaTeInput">Taxa TE</label>
-              <div class="input-suffix" data-suffix="R$">
-                <input type="number" class="input-field" id="taxaTeInput" value="0" min="0" max="5" step="0.01">
-              </div>
+            <div class="data-row">
+              <span class="data-label">Taxa TE</span>
+              <span class="data-value" id="taxaTe">-</span>
             </div>
-            <div class="input-group">
-              <label class="input-label" for="totalTaxasInput">Total das Taxas (editavel)</label>
-              <div class="input-suffix" data-suffix="R$">
-                <input type="number" class="input-field" id="totalTaxasInput" value="0" min="0" max="10" step="0.01" style="color: var(--amber); font-weight: 700;">
-              </div>
+            <div class="data-row">
+              <span class="data-label">Total das Taxas</span>
+              <span class="data-value highlight amber" id="totalTaxas">-</span>
             </div>
           </div>
         </div>
@@ -794,23 +788,9 @@
         leituraAnterior: leituraAnterior || 0,
         leituraAtual: leituraAtual || 0,
         consumo: consumo || 0,
-        taxaTusd: roundCustom(taxaTusd || 0),
-        taxaTe: roundCustom(taxaTe || 0),
-        taxaTusdRaw: taxaTusd || 0,
-        taxaTeRaw: taxaTe || 0
+        taxaTusd: taxaTusd || 0,
+        taxaTe: taxaTe || 0
       };
-    }
-
-    // Arredonda para 2 casas: se o terceiro digito decimal >= 6, arredonda pra cima
-    // Ex: 0.82063 -> terceiro digito = 0 -> fica 0.82
-    // Ex: 0.8260  -> terceiro digito = 6 -> vira 0.83
-    function roundCustom(val) {
-      var truncated = Math.floor(val * 100) / 100;
-      var thirdDigit = Math.floor(val * 1000) % 10;
-      if (thirdDigit >= 6) {
-        return Math.round((truncated + 0.01) * 100) / 100;
-      }
-      return truncated;
     }
 
     function parseBRNumber(str) {
@@ -832,13 +812,11 @@
       document.getElementById('leituraAtual').textContent = formatBR(extractedData.leituraAtual);
       document.getElementById('consumoTotal').textContent = extractedData.consumo + ' kWh';
 
-      // Populate editable tax inputs
-      document.getElementById('taxaTusdInput').value = extractedData.taxaTusd.toFixed(2);
-      document.getElementById('taxaTeInput').value = extractedData.taxaTe.toFixed(2);
+      document.getElementById('taxaTusd').textContent = 'R$ ' + extractedData.taxaTusd.toFixed(8);
+      document.getElementById('taxaTe').textContent = 'R$ ' + extractedData.taxaTe.toFixed(8);
 
-      // Total taxas: soma os valores brutos e aplica roundCustom
-      var totalCalc = roundCustom(extractedData.taxaTusdRaw + extractedData.taxaTeRaw);
-      document.getElementById('totalTaxasInput').value = totalCalc.toFixed(2);
+      var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
+      document.getElementById('totalTaxas').textContent = 'R$ ' + totalTaxas.toFixed(8);
 
       recalculate();
 
@@ -853,13 +831,11 @@
       var desconto = parseFloat(document.getElementById('desconto').value) || 0;
       var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
 
-      // Le o total das taxas direto do campo editavel
-      var totalTaxas = parseFloat(document.getElementById('totalTaxasInput').value) || 0;
-
-      var valorBruto = Math.round(extractedData.consumo * totalTaxas * 100) / 100;
-      var valorDescontoAmt = Math.round(valorBruto * (desconto / 100) * 100) / 100;
-      var valorComDesconto = Math.round((valorBruto - valorDescontoAmt) * 100) / 100;
-      var valorPorPessoa = Math.round(valorComDesconto / pessoas * 100) / 100;
+      var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
+      var valorBruto = extractedData.consumo * totalTaxas;
+      var valorDescontoAmt = valorBruto * (desconto / 100);
+      var valorComDesconto = valorBruto - valorDescontoAmt;
+      var valorPorPessoa = valorComDesconto / pessoas;
 
       document.getElementById('valorBruto').textContent = 'R$ ' + valorBruto.toFixed(2);
       document.getElementById('valorDesconto').textContent = '- R$ ' + valorDescontoAmt.toFixed(2);
