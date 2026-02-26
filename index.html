@@ -3,7 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculadora de Conta de Luz</title>
+  <title>Calculadora de Conta de Luz - Neoenergia Pernambuco</title>
+  <meta name="description" content="Calculadora gratuita para conta de luz da Neoenergia Pernambuco. Envie o PDF da sua fatura, extraia leituras, taxas TUSD e TE, calcule descontos e divida entre moradores. Nenhum dado armazenado.">
+  <meta name="keywords" content="conta de luz, calculadora, neoenergia, pernambuco, TUSD, TE, energia eletrica, fatura, PDF, desconto, divisao, moradores, celpe, tarifa social">
+  <meta name="author" content="Conta de Luz Calculator">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+  <link rel="canonical" href="https://johnpitter.github.io/conta-luz-calculator/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Calculadora de Conta de Luz - Neoenergia Pernambuco">
+  <meta property="og:description" content="Envie o PDF da sua conta de luz e calcule automaticamente o valor por pessoa com desconto. Compativel com faturas da Neoenergia PE.">
+  <meta property="og:url" content="https://johnpitter.github.io/conta-luz-calculator/">
+  <meta property="og:site_name" content="Calculadora Conta de Luz">
+  <meta property="og:locale" content="pt_BR">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Calculadora de Conta de Luz - Neoenergia PE">
+  <meta name="twitter:description" content="Envie o PDF da sua conta de luz e calcule automaticamente o valor por pessoa com desconto.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/png" href="favicon.ico">
+  <link rel="apple-touch-icon" href="favicon.ico">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Calculadora de Conta de Luz",
+    "description": "Calculadora gratuita para conta de luz da Neoenergia Pernambuco. Extraia dados do PDF e calcule o valor por pessoa.",
+    "url": "https://johnpitter.github.io/conta-luz-calculator/",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "BRL"
+    },
+    "creator": {
+      "@type": "Organization",
+      "name": "Conta de Luz Calculator"
+    }
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -314,7 +360,67 @@
 
     .error-msg.visible { display: block; }
 
-    .footer { text-align: center; padding: 24px; color: var(--gray-400); font-size: 13px; }
+    /* Disclaimer */
+    .disclaimer {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 32px;
+    }
+
+    .disclaimer-box {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .disclaimer-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .disclaimer-items {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .disclaimer-items li {
+      font-size: 13px;
+      color: var(--gray-500);
+      line-height: 1.5;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .disclaimer-items li::before {
+      content: '\2022';
+      position: absolute;
+      left: 6px;
+      color: var(--gray-300);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 20px 24px 28px;
+      color: var(--gray-400);
+      font-size: 12px;
+      border-top: 1px solid var(--gray-200);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .footer-line { margin-bottom: 4px; }
 
     @media (max-width: 768px) {
       .cards-grid { grid-template-columns: 1fr; }
@@ -477,7 +583,22 @@
     </div>
   </main>
 
-  <footer class="footer">Nenhum dado e armazenado. Todo processamento ocorre no seu navegador.</footer>
+  <section class="disclaimer">
+    <div class="disclaimer-box">
+      <div class="disclaimer-title">&#128274; Aviso Importante</div>
+      <ul class="disclaimer-items">
+        <li>Nenhum dado e armazenado, coletado ou enviado para servidores. Todo o processamento do PDF ocorre exclusivamente no seu navegador, em tempo de execucao.</li>
+        <li>Esta ferramenta e compativel com faturas da Neoenergia Pernambuco (antiga CELPE). Outros formatos de conta de luz podem nao ser reconhecidos.</li>
+        <li>Os valores calculados sao estimativas baseadas nas taxas TUSD e TE extraidas do PDF. Para valores oficiais, consulte sua distribuidora.</li>
+        <li>Esta aplicacao nao possui vinculo com a Neoenergia, CELPE ou qualquer distribuidora de energia.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-line">Calculadora de Conta de Luz - Compativel com Neoenergia Pernambuco</div>
+    <div>Ferramenta gratuita e open source. Nenhum dado armazenado.</div>
+  </footer>
 
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-box">
