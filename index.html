@@ -571,46 +571,41 @@
       var taxaTusd = null;
       var taxaTe = null;
 
-      // Extract TUSD rate
-      var tusdPatterns = [
-        /Consumo[\s\-]*TUSD[^0-9]*?(\d+[.,]\d+)/i,
-        /TUSD[^0-9]*?(\d+[.,]\d{4,})/i
-      ];
-      for (var pi = 0; pi < tusdPatterns.length; pi++) {
-        var m = t.match(tusdPatterns[pi]);
-        if (m) {
-          var val = parseBRNumber(m[1]);
-          if (val > 0 && val < 5) { taxaTusd = val; break; }
-        }
+      // Extract TUSD rate - look for "Consumo-TUSD" then find the PRECO UNIT value (high precision decimal)
+      var tusdMatch = t.match(/Consumo[\s\-]*TUSD[\s\S]*?(\d+[.,]\d{5,})/i);
+      if (tusdMatch) {
+        var val = parseBRNumber(tusdMatch[1]);
+        if (val > 0 && val < 5) taxaTusd = val;
       }
 
-      // Extract TE rate
-      var tePatterns = [
-        /Consumo[\s\-]*TE[^0-9]*?(\d+[.,]\d+)/i,
-        /[\s,]TE\b[^0-9]*?(\d+[.,]\d{4,})/i
-      ];
-      for (var ti = 0; ti < tePatterns.length; ti++) {
-        var mt = t.match(tePatterns[ti]);
-        if (mt) {
-          var valt = parseBRNumber(mt[1]);
-          if (valt > 0 && valt < 5) { taxaTe = valt; break; }
-        }
+      // Extract TE rate - look for "Consumo-TE" then find the PRECO UNIT value
+      var teMatch = t.match(/Consumo[\s\-]*TE[\s\S]*?(\d+[.,]\d{5,})/i);
+      if (teMatch) {
+        var val2 = parseBRNumber(teMatch[1]);
+        if (val2 > 0 && val2 < 5) taxaTe = val2;
       }
 
-      // Fallback: find high-precision decimals
+      // Fallback: find the two largest high-precision decimals under 1.0 (exclude 1,00000 medidor constant)
       if (!taxaTusd || !taxaTe) {
         var allRates = [];
         var rateRegex = /(\d+[.,]\d{5,})/g;
         var rm;
         while ((rm = rateRegex.exec(t)) !== null) {
-          allRates.push(parseBRNumber(rm[1]));
+          var rv = parseBRNumber(rm[1]);
+          if (rv > 0.1 && rv < 1.0) allRates.push(rv);
         }
-        var candidates = allRates.filter(function(v) { return v > 0.1 && v < 2; });
-        if (candidates.length >= 2) {
-          candidates.sort(function(a, b) { return b - a; });
-          if (!taxaTusd) taxaTusd = candidates[0];
-          if (!taxaTe) taxaTe = candidates[1];
+        // Deduplicate
+        var unique = [];
+        for (var ri = 0; ri < allRates.length; ri++) {
+          var found = false;
+          for (var rj = 0; rj < unique.length; rj++) {
+            if (Math.abs(unique[rj] - allRates[ri]) < 0.0001) { found = true; break; }
+          }
+          if (!found) unique.push(allRates[ri]);
         }
+        unique.sort(function(a, b) { return b - a; });
+        if (!taxaTusd && unique.length >= 1) taxaTusd = unique[0];
+        if (!taxaTe && unique.length >= 2) taxaTe = unique[1];
       }
 
       // Extract Leituras
