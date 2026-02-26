@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Conta de Luz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --navy: #0f2942;
+      --navy-light: #1a3a5c;
+      --blue: #2563eb;
+      --blue-light: #3b82f6;
+      --amber: #f59e0b;
+      --amber-light: #fbbf24;
+      --green: #10b981;
+      --green-dark: #059669;
+      --red: #ef4444;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+      --white: #ffffff;
+      --shadow-sm: 0 1px 2px rgba(15,23,42,0.06);
+      --shadow: 0 1px 3px rgba(15,23,42,0.1), 0 1px 2px rgba(15,23,42,0.06);
+      --shadow-md: 0 4px 6px -1px rgba(15,23,42,0.1), 0 2px 4px -2px rgba(15,23,42,0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(15,23,42,0.1), 0 4px 6px -4px rgba(15,23,42,0.1);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; line-height: 1.2; }
+
+    .header {
+      background: var(--navy);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(15,41,66,0.3);
+    }
+
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo { display: flex; align-items: center; gap: 12px; }
+
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--amber), var(--amber-light));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    .logo-text {
+      color: var(--white); font-family: 'Outfit', sans-serif;
+      font-size: 20px; font-weight: 600; letter-spacing: -0.3px;
+    }
+
+    .logo-sub {
+      color: var(--gray-400); font-size: 12px; font-weight: 400;
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+
+    .header-badge {
+      background: rgba(245,158,11,0.15); color: var(--amber);
+      padding: 6px 14px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+    }
+
+    .main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 60px; }
+    .upload-section { margin-bottom: 32px; }
+
+    .upload-zone {
+      border: 2px dashed var(--gray-300); border-radius: var(--radius);
+      padding: 48px 32px; text-align: center; cursor: pointer;
+      transition: all 0.25s ease; background: var(--white);
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--blue); background: rgba(37,99,235,0.02);
+      transform: translateY(-1px); box-shadow: var(--shadow-md);
+    }
+
+    .upload-zone.has-file {
+      border-color: var(--green); border-style: solid;
+      background: rgba(16,185,129,0.03);
+    }
+
+    .upload-icon {
+      width: 64px; height: 64px; margin: 0 auto 16px;
+      background: var(--gray-100); border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; transition: all 0.25s ease;
+    }
+
+    .upload-zone:hover .upload-icon { background: rgba(37,99,235,0.1); transform: scale(1.05); }
+    .upload-zone.has-file .upload-icon { background: rgba(16,185,129,0.1); }
+
+    .upload-title {
+      font-family: 'Outfit', sans-serif; font-size: 18px;
+      font-weight: 600; color: var(--gray-800); margin-bottom: 6px;
+    }
+
+    .upload-subtitle { font-size: 14px; color: var(--gray-500); }
+
+    .upload-link {
+      color: var(--blue); font-weight: 600;
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+
+    .file-info {
+      display: none; align-items: center; gap: 10px; margin-top: 14px;
+      padding: 10px 16px; background: rgba(16,185,129,0.08);
+      border-radius: var(--radius-sm); font-size: 14px;
+      color: var(--green-dark); font-weight: 500;
+    }
+
+    .upload-zone.has-file .file-info { display: inline-flex; }
+    #fileInput { display: none; }
+
+    .cards-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 24px; margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow: hidden;
+      opacity: 0; transform: translateY(12px); transition: all 0.4s ease;
+    }
+
+    .card.visible { opacity: 1; transform: translateY(0); }
+
+    .card-header {
+      padding: 18px 24px; border-bottom: 1px solid var(--gray-100);
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .card-header-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+
+    .card-header-icon.blue { background: rgba(37,99,235,0.1); }
+    .card-header-icon.amber { background: rgba(245,158,11,0.1); }
+    .card-header-icon.green { background: rgba(16,185,129,0.1); }
+    .card-header-icon.navy { background: rgba(15,41,66,0.08); }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif; font-size: 15px;
+      font-weight: 600; color: var(--gray-700); letter-spacing: -0.2px;
+    }
+
+    .card-body { padding: 24px; }
+
+    .data-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid var(--gray-100);
+    }
+
+    .data-row:last-child { border-bottom: none; }
+    .data-label { font-size: 14px; color: var(--gray-500); font-weight: 500; }
+
+    .data-value {
+      font-family: 'Outfit', sans-serif; font-size: 16px;
+      font-weight: 600; color: var(--gray-800);
+    }
+
+    .data-value.highlight { color: var(--blue); font-size: 18px; }
+    .data-value.amber { color: var(--amber); }
+    .data-value.green { color: var(--green-dark); }
+
+    .input-group { margin-bottom: 20px; }
+    .input-group:last-child { margin-bottom: 0; }
+
+    .input-label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: var(--gray-600); margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    .input-field {
+      width: 100%; padding: 12px 16px;
+      border: 2px solid var(--gray-200); border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif; font-size: 16px;
+      font-weight: 600; color: var(--gray-800);
+      background: var(--gray-50); transition: all 0.2s ease; outline: none;
+    }
+
+    .input-field:focus {
+      border-color: var(--blue); background: var(--white);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+
+    .input-suffix { position: relative; }
+
+    .input-suffix::after {
+      content: attr(data-suffix); position: absolute;
+      right: 16px; top: 50%; transform: translateY(-50%);
+      font-size: 14px; color: var(--gray-400); font-weight: 600; pointer-events: none;
+    }
+
+    .result-card { grid-column: 1 / -1; }
+
+    .result-card .card-header {
+      background: linear-gradient(135deg, var(--navy), var(--navy-light));
+      border-bottom: none;
+    }
+
+    .result-card .card-title { color: var(--white); }
+    .result-card .card-header-icon { background: rgba(245,158,11,0.2); }
+
+    .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+    .result-item {
+      text-align: center; padding: 20px 16px;
+      background: var(--gray-50); border-radius: var(--radius-sm);
+      border: 1px solid var(--gray-100); transition: all 0.25s ease;
+    }
+
+    .result-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+    .result-item.primary {
+      background: linear-gradient(135deg, var(--navy), var(--navy-light));
+      border-color: transparent;
+    }
+
+    .result-item-label {
+      font-size: 12px; color: var(--gray-500); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+    }
+
+    .result-item.primary .result-item-label { color: var(--gray-400); }
+
+    .result-item-value {
+      font-family: 'Outfit', sans-serif; font-size: 28px;
+      font-weight: 700; color: var(--gray-800); letter-spacing: -0.5px;
+    }
+
+    .result-item.primary .result-item-value { color: var(--amber); font-size: 32px; }
+
+    .result-item-unit { font-size: 13px; color: var(--gray-400); font-weight: 500; margin-top: 2px; }
+    .result-item.primary .result-item-unit { color: var(--gray-400); }
+
+    .results-area { display: none; }
+    .results-area.visible { display: block; }
+
+    .btn-recalc {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--blue), var(--blue-light));
+      color: var(--white); border: none; border-radius: var(--radius-sm);
+      font-family: 'Outfit', sans-serif; font-size: 15px;
+      font-weight: 600; cursor: pointer; transition: all 0.2s ease; margin-top: 8px;
+    }
+
+    .btn-recalc:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+
+    .loading-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+
+    .loading-overlay.visible { display: flex; }
+
+    .loading-box {
+      background: var(--white); padding: 40px;
+      border-radius: var(--radius); text-align: center; box-shadow: var(--shadow-lg);
+    }
+
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid var(--gray-200);
+      border-top-color: var(--blue); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-family: 'Outfit', sans-serif; font-size: 16px;
+      font-weight: 600; color: var(--gray-700);
+    }
+
+    .error-msg {
+      display: none; background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2); color: var(--red);
+      padding: 14px 20px; border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 500; margin-top: 16px; text-align: center;
+    }
+
+    .error-msg.visible { display: block; }
+
+    .footer { text-align: center; padding: 24px; color: var(--gray-400); font-size: 13px; }
+
+    @media (max-width: 768px) {
+      .cards-grid { grid-template-columns: 1fr; }
+      .result-grid { grid-template-columns: 1fr; }
+      .header-badge { display: none; }
+      .upload-zone { padding: 32px 20px; }
+      .main { padding: 20px 16px 40px; }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in { animation: fadeInUp 0.4s ease forwards; }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">&#9889;</div>
+        <div>
+          <div class="logo-text">Conta de Luz</div>
+          <div class="logo-sub">Calculadora</div>
+        </div>
+      </div>
+      <div class="header-badge">Nenhum dado armazenado</div>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="upload-section">
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon" id="uploadIcon">&#128196;</div>
+        <div class="upload-title" id="uploadTitle">Envie sua conta de luz</div>
+        <div class="upload-subtitle" id="uploadSubtitle">Arraste o PDF aqui ou <span class="upload-link">clique para selecionar</span></div>
+        <div class="file-info" id="fileInfo">&#10003; <span id="fileName"></span></div>
+        <input type="file" id="fileInput" accept=".pdf">
+      </div>
+      <div class="error-msg" id="errorMsg"></div>
+    </section>
+
+    <div class="results-area" id="resultsArea">
+      <div class="cards-grid">
+        <div class="card animate-in">
+          <div class="card-header">
+            <div class="card-header-icon blue">&#128202;</div>
+            <div class="card-title">Leituras do Medidor</div>
+          </div>
+          <div class="card-body">
+            <div class="data-row">
+              <span class="data-label">Leitura Anterior</span>
+              <span class="data-value" id="leituraAnterior">-</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">Leitura Atual</span>
+              <span class="data-value" id="leituraAtual">-</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">Consumo Total</span>
+              <span class="data-value highlight" id="consumoTotal">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card animate-in delay-1">
+          <div class="card-header">
+            <div class="card-header-icon amber">&#128176;</div>
+            <div class="card-title">Taxas e Tarifas</div>
+          </div>
+          <div class="card-body">
+            <div class="data-row">
+              <span class="data-label">Taxa TUSD</span>
+              <span class="data-value" id="taxaTusd">-</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">Taxa TE</span>
+              <span class="data-value" id="taxaTe">-</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">Total das Taxas</span>
+              <span class="data-value highlight amber" id="totalTaxas">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card animate-in delay-2">
+          <div class="card-header">
+            <div class="card-header-icon navy">&#9881;</div>
+            <div class="card-title">Parametros</div>
+          </div>
+          <div class="card-body">
+            <div class="input-group">
+              <label class="input-label" for="desconto">Desconto</label>
+              <div class="input-suffix" data-suffix="%">
+                <input type="number" class="input-field" id="desconto" value="30" min="0" max="100" step="1">
+              </div>
+            </div>
+            <div class="input-group">
+              <label class="input-label" for="pessoas">Total de Pessoas</label>
+              <div class="input-suffix" data-suffix="pessoas">
+                <input type="number" class="input-field" id="pessoas" value="2" min="1" max="20" step="1">
+              </div>
+            </div>
+            <button class="btn-recalc" id="btnRecalc">Recalcular</button>
+          </div>
+        </div>
+
+        <div class="card animate-in delay-2">
+          <div class="card-header">
+            <div class="card-header-icon green">&#128203;</div>
+            <div class="card-title">Detalhamento</div>
+          </div>
+          <div class="card-body">
+            <div class="data-row">
+              <span class="data-label">Valor Bruto (kWh x taxas)</span>
+              <span class="data-value" id="valorBruto">-</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">Desconto Aplicado</span>
+              <span class="data-value green" id="valorDesconto">-</span>
+            </div>
+            <div class="data-row">
+              <span class="data-label">Valor com Desconto</span>
+              <span class="data-value" id="valorComDesconto">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card result-card animate-in delay-3">
+          <div class="card-header">
+            <div class="card-header-icon">&#9889;</div>
+            <div class="card-title">Resultado Final</div>
+          </div>
+          <div class="card-body">
+            <div class="result-grid">
+              <div class="result-item">
+                <div class="result-item-label">Valor Bruto</div>
+                <div class="result-item-value" id="resBruto">-</div>
+                <div class="result-item-unit">R$</div>
+              </div>
+              <div class="result-item">
+                <div class="result-item-label">Valor c/ Desconto</div>
+                <div class="result-item-value" id="resDesconto">-</div>
+                <div class="result-item-unit">R$</div>
+              </div>
+              <div class="result-item primary">
+                <div class="result-item-label">Valor por Pessoa</div>
+                <div class="result-item-value" id="resPessoa">-</div>
+                <div class="result-item-unit">R$ por pessoa</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">Nenhum dado e armazenado. Todo processamento ocorre no seu navegador.</footer>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <div class="loading-text">Analisando PDF...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    var pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+
+    var uploadZone = document.getElementById('uploadZone');
+    var fileInput = document.getElementById('fileInput');
+    var uploadIcon = document.getElementById('uploadIcon');
+    var uploadTitle = document.getElementById('uploadTitle');
+    var uploadSubtitle = document.getElementById('uploadSubtitle');
+    var fileNameEl = document.getElementById('fileName');
+    var errorMsg = document.getElementById('errorMsg');
+    var resultsArea = document.getElementById('resultsArea');
+    var loadingOverlay = document.getElementById('loadingOverlay');
+    var btnRecalc = document.getElementById('btnRecalc');
+
+    var extractedData = null;
+
+    uploadZone.addEventListener('click', function() { fileInput.click(); });
+    fileInput.addEventListener('change', function(e) {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+    uploadZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+    uploadZone.addEventListener('dragleave', function() {
+      uploadZone.classList.remove('drag-over');
+    });
+    uploadZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    btnRecalc.addEventListener('click', recalculate);
+
+    async function handleFile(file) {
+      if (file.type !== 'application/pdf') {
+        showError('Por favor, envie um arquivo PDF.');
+        return;
+      }
+      hideError();
+      showLoading(true);
+
+      try {
+        var arrayBuffer = await file.arrayBuffer();
+        var pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        var fullText = '';
+
+        for (var i = 1; i <= pdf.numPages; i++) {
+          var page = await pdf.getPage(i);
+          var textContent = await page.getTextContent();
+          var pageText = textContent.items.map(function(item) { return item.str; }).join(' ');
+          fullText += pageText + '\n';
+        }
+
+        extractedData = extractDataFromText(fullText);
+
+        if (!extractedData) {
+          showError('Nao foi possivel extrair os dados da conta. Verifique se o PDF e uma conta de luz valida.');
+          showLoading(false);
+          return;
+        }
+
+        uploadZone.classList.add('has-file');
+        uploadIcon.textContent = '\u2705';
+        uploadTitle.textContent = 'PDF carregado com sucesso';
+        uploadSubtitle.textContent = 'Clique para enviar outro arquivo';
+        fileNameEl.textContent = file.name;
+
+        displayResults();
+        showLoading(false);
+      } catch (err) {
+        showError('Erro ao processar o PDF. Tente novamente.');
+        showLoading(false);
+      }
+    }
+
+    function extractDataFromText(text) {
+      var t = text.replace(/\s+/g, ' ');
+      var leituraAnterior = null;
+      var leituraAtual = null;
+      var consumo = null;
+      var taxaTusd = null;
+      var taxaTe = null;
+
+      // Extract TUSD rate
+      var tusdPatterns = [
+        /Consumo[\s\-]*TUSD[^0-9]*?(\d+[.,]\d+)/i,
+        /TUSD[^0-9]*?(\d+[.,]\d{4,})/i
+      ];
+      for (var pi = 0; pi < tusdPatterns.length; pi++) {
+        var m = t.match(tusdPatterns[pi]);
+        if (m) {
+          var val = parseBRNumber(m[1]);
+          if (val > 0 && val < 5) { taxaTusd = val; break; }
+        }
+      }
+
+      // Extract TE rate
+      var tePatterns = [
+        /Consumo[\s\-]*TE[^0-9]*?(\d+[.,]\d+)/i,
+        /[\s,]TE\b[^0-9]*?(\d+[.,]\d{4,})/i
+      ];
+      for (var ti = 0; ti < tePatterns.length; ti++) {
+        var mt = t.match(tePatterns[ti]);
+        if (mt) {
+          var valt = parseBRNumber(mt[1]);
+          if (valt > 0 && valt < 5) { taxaTe = valt; break; }
+        }
+      }
+
+      // Fallback: find high-precision decimals
+      if (!taxaTusd || !taxaTe) {
+        var allRates = [];
+        var rateRegex = /(\d+[.,]\d{5,})/g;
+        var rm;
+        while ((rm = rateRegex.exec(t)) !== null) {
+          allRates.push(parseBRNumber(rm[1]));
+        }
+        var candidates = allRates.filter(function(v) { return v > 0.1 && v < 2; });
+        if (candidates.length >= 2) {
+          candidates.sort(function(a, b) { return b - a; });
+          if (!taxaTusd) taxaTusd = candidates[0];
+          if (!taxaTe) taxaTe = candidates[1];
+        }
+      }
+
+      // Extract Leituras
+      var leituraPattern = /(?:ANTERIOR|anterior)[^0-9]*?([\d.]+[.,]\d{2})[^0-9]*?(?:ATUAL|atual)[^0-9]*?([\d.]+[.,]\d{2})/i;
+      var leituraMatch = t.match(leituraPattern);
+      if (leituraMatch) {
+        leituraAnterior = parseBRNumber(leituraMatch[1]);
+        leituraAtual = parseBRNumber(leituraMatch[2]);
+      }
+
+      if (!leituraAnterior || !leituraAtual) {
+        var medidorPattern = /(?:MEDIDOR|Medidor)[^]*?(\d[\d.]+[.,]\d{2})[^0-9]+(\d[\d.]+[.,]\d{2})/i;
+        var mm = t.match(medidorPattern);
+        if (mm) {
+          var v1 = parseBRNumber(mm[1]);
+          var v2 = parseBRNumber(mm[2]);
+          if (v1 < v2) { leituraAnterior = v1; leituraAtual = v2; }
+          else { leituraAnterior = v2; leituraAtual = v1; }
+        }
+      }
+
+      if (!leituraAnterior || !leituraAtual) {
+        var energiaPattern = /(?:Energia\s*Ativa|[Uu]nico)[^0-9]*?([\d.]+[.,]\d{2})[^0-9]+([\d.]+[.,]\d{2})/i;
+        var em = t.match(energiaPattern);
+        if (em) {
+          var ev1 = parseBRNumber(em[1]);
+          var ev2 = parseBRNumber(em[2]);
+          if (ev1 < ev2) { leituraAnterior = ev1; leituraAtual = ev2; }
+          else { leituraAnterior = ev2; leituraAtual = ev1; }
+        }
+      }
+
+      // Extract Consumo
+      var consumoMatch = t.match(/[Cc]onsumo[^0-9]*?(\d{2,5})\s*(?:kWh|$)/);
+      if (consumoMatch) consumo = parseInt(consumoMatch[1], 10);
+
+      if (!consumo && leituraAnterior && leituraAtual) {
+        consumo = Math.round(leituraAtual - leituraAnterior);
+      }
+
+      if (!consumo) {
+        var catMatch = t.match(/CAT[^0-9]*?(\d{2,5})\s*kWh/i);
+        if (catMatch) consumo = parseInt(catMatch[1], 10);
+      }
+
+      if (!consumo) {
+        var kwhMatch = t.match(/(\d{2,5})\s*kWh/);
+        if (kwhMatch) consumo = parseInt(kwhMatch[1], 10);
+      }
+
+      if (!taxaTusd && !taxaTe) return null;
+      if (!consumo && (!leituraAnterior || !leituraAtual)) return null;
+
+      if (!consumo && leituraAnterior && leituraAtual) {
+        consumo = Math.round(leituraAtual - leituraAnterior);
+      }
+
+      return {
+        leituraAnterior: leituraAnterior || 0,
+        leituraAtual: leituraAtual || 0,
+        consumo: consumo || 0,
+        taxaTusd: taxaTusd || 0,
+        taxaTe: taxaTe || 0
+      };
+    }
+
+    function parseBRNumber(str) {
+      if (!str) return 0;
+      var s = str.trim();
+      if (s.indexOf('.') !== -1 && s.indexOf(',') !== -1) {
+        s = s.replace(/\./g, '').replace(',', '.');
+      } else if (s.indexOf(',') !== -1) {
+        s = s.replace(',', '.');
+      }
+      return parseFloat(s) || 0;
+    }
+
+    function displayResults() {
+      if (!extractedData) return;
+      resultsArea.classList.add('visible');
+
+      document.getElementById('leituraAnterior').textContent = formatBR(extractedData.leituraAnterior);
+      document.getElementById('leituraAtual').textContent = formatBR(extractedData.leituraAtual);
+      document.getElementById('consumoTotal').textContent = extractedData.consumo + ' kWh';
+      document.getElementById('taxaTusd').textContent = 'R$ ' + extractedData.taxaTusd.toFixed(2);
+      document.getElementById('taxaTe').textContent = 'R$ ' + extractedData.taxaTe.toFixed(2);
+
+      var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
+      document.getElementById('totalTaxas').textContent = 'R$ ' + totalTaxas.toFixed(2);
+
+      recalculate();
+
+      setTimeout(function() {
+        var cards = document.querySelectorAll('.card');
+        for (var i = 0; i < cards.length; i++) cards[i].classList.add('visible');
+      }, 100);
+    }
+
+    function recalculate() {
+      if (!extractedData) return;
+      var desconto = parseFloat(document.getElementById('desconto').value) || 0;
+      var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
+
+      var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
+      var valorBruto = extractedData.consumo * totalTaxas;
+      var valorDescontoAmt = valorBruto * (desconto / 100);
+      var valorComDesconto = valorBruto - valorDescontoAmt;
+      var valorPorPessoa = valorComDesconto / pessoas;
+
+      document.getElementById('valorBruto').textContent = 'R$ ' + valorBruto.toFixed(2);
+      document.getElementById('valorDesconto').textContent = '- R$ ' + valorDescontoAmt.toFixed(2);
+      document.getElementById('valorComDesconto').textContent = 'R$ ' + valorComDesconto.toFixed(2);
+      document.getElementById('resBruto').textContent = valorBruto.toFixed(2);
+      document.getElementById('resDesconto').textContent = valorComDesconto.toFixed(2);
+      document.getElementById('resPessoa').textContent = valorPorPessoa.toFixed(2);
+    }
+
+    function formatBR(n) {
+      return n.toLocaleString('pt-BR');
+    }
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('visible');
+    }
+
+    function hideError() {
+      errorMsg.classList.remove('visible');
+    }
+
+    function showLoading(show) {
+      if (show) loadingOverlay.classList.add('visible');
+      else loadingOverlay.classList.remove('visible');
+    }
+  </script>
+</body>
+</html>
