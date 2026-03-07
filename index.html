@@ -325,6 +325,18 @@
 
     .btn-recalc:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
 
+    .btn-whatsapp {
+      width: 100%; padding: 14px; margin-top: 20px;
+      background: linear-gradient(135deg, #25d366, #128c7e);
+      color: var(--white); border: none; border-radius: var(--radius-sm);
+      font-family: 'Outfit', sans-serif; font-size: 15px;
+      font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+
+    .btn-whatsapp:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,211,102,0.3); }
+    .btn-whatsapp:active { transform: scale(0.98); }
+
     .loading-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
@@ -529,6 +541,12 @@
                 <input type="number" class="input-field" id="pessoas" value="2" min="1" max="20" step="1">
               </div>
             </div>
+            <div class="input-group">
+              <label class="input-label" for="valoresAdicionais">Valores Adicionais</label>
+              <div class="input-suffix" data-suffix="R$">
+                <input type="number" class="input-field" id="valoresAdicionais" value="0" min="0" step="0.01" placeholder="0,00">
+              </div>
+            </div>
             <button class="btn-recalc" id="btnRecalc">Recalcular</button>
           </div>
         </div>
@@ -550,6 +568,14 @@
             <div class="data-row">
               <span class="data-label">Valor com Desconto</span>
               <span class="data-value" id="valorComDesconto">-</span>
+            </div>
+            <div class="data-row" id="rowAdicionais" style="display: none;">
+              <span class="data-label">Valores Adicionais</span>
+              <span class="data-value amber" id="valorAdicionais">-</span>
+            </div>
+            <div class="data-row" id="rowTotal" style="display: none;">
+              <span class="data-label">Total Final</span>
+              <span class="data-value highlight" id="valorTotal">-</span>
             </div>
           </div>
         </div>
@@ -577,6 +603,10 @@
                 <div class="result-item-unit">R$ por pessoa</div>
               </div>
             </div>
+            <button class="btn-whatsapp" id="btnWhatsapp">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Enviar Resumo via WhatsApp
+            </button>
           </div>
         </div>
       </div>
@@ -640,7 +670,9 @@
       uploadZone.classList.remove('drag-over');
       if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
     });
+    var btnWhatsapp = document.getElementById('btnWhatsapp');
     btnRecalc.addEventListener('click', recalculate);
+    btnWhatsapp.addEventListener('click', sendWhatsapp);
 
     async function handleFile(file) {
       if (file.type !== 'application/pdf') {
@@ -830,19 +862,64 @@
       if (!extractedData) return;
       var desconto = parseFloat(document.getElementById('desconto').value) || 0;
       var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
+      var adicionais = parseFloat(document.getElementById('valoresAdicionais').value) || 0;
 
       var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
       var valorBruto = extractedData.consumo * totalTaxas;
       var valorDescontoAmt = valorBruto * (desconto / 100);
       var valorComDesconto = valorBruto - valorDescontoAmt;
-      var valorPorPessoa = valorComDesconto / pessoas;
+      var valorFinal = valorComDesconto + adicionais;
+      var valorPorPessoa = valorFinal / pessoas;
 
       document.getElementById('valorBruto').textContent = 'R$ ' + valorBruto.toFixed(2);
       document.getElementById('valorDesconto').textContent = '- R$ ' + valorDescontoAmt.toFixed(2);
       document.getElementById('valorComDesconto').textContent = 'R$ ' + valorComDesconto.toFixed(2);
+
+      var rowAdicionais = document.getElementById('rowAdicionais');
+      var rowTotal = document.getElementById('rowTotal');
+      if (adicionais > 0) {
+        rowAdicionais.style.display = 'flex';
+        rowTotal.style.display = 'flex';
+        document.getElementById('valorAdicionais').textContent = '+ R$ ' + adicionais.toFixed(2);
+        document.getElementById('valorTotal').textContent = 'R$ ' + valorFinal.toFixed(2);
+      } else {
+        rowAdicionais.style.display = 'none';
+        rowTotal.style.display = 'none';
+      }
+
       document.getElementById('resBruto').textContent = valorBruto.toFixed(2);
       document.getElementById('resDesconto').textContent = valorComDesconto.toFixed(2);
       document.getElementById('resPessoa').textContent = valorPorPessoa.toFixed(2);
+    }
+
+    function sendWhatsapp() {
+      if (!extractedData) return;
+      var desconto = parseFloat(document.getElementById('desconto').value) || 0;
+      var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
+      var adicionais = parseFloat(document.getElementById('valoresAdicionais').value) || 0;
+
+      var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
+      var valorBruto = extractedData.consumo * totalTaxas;
+      var valorDescontoAmt = valorBruto * (desconto / 100);
+      var valorComDesconto = valorBruto - valorDescontoAmt;
+      var valorFinal = valorComDesconto + adicionais;
+      var valorPorPessoa = valorFinal / pessoas;
+
+      var msg = '*Resumo da Conta de Luz*\n\n';
+      msg += 'Consumo: ' + extractedData.consumo + ' kWh\n';
+      msg += 'Taxa TUSD: R$ ' + extractedData.taxaTusd.toFixed(8) + '\n';
+      msg += 'Taxa TE: R$ ' + extractedData.taxaTe.toFixed(8) + '\n\n';
+      msg += 'Valor Bruto: R$ ' + valorBruto.toFixed(2) + '\n';
+      msg += 'Desconto (' + desconto + '%): - R$ ' + valorDescontoAmt.toFixed(2) + '\n';
+      msg += 'Valor c/ Desconto: R$ ' + valorComDesconto.toFixed(2) + '\n';
+      if (adicionais > 0) {
+        msg += 'Valores Adicionais: + R$ ' + adicionais.toFixed(2) + '\n';
+        msg += 'Total Final: R$ ' + valorFinal.toFixed(2) + '\n';
+      }
+      msg += '\n*Valor por pessoa (' + pessoas + '): R$ ' + valorPorPessoa.toFixed(2) + '*';
+
+      var url = 'https://wa.me/?text=' + encodeURIComponent(msg);
+      window.open(url, '_blank');
     }
 
     function formatBR(n) {
