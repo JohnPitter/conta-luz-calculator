@@ -345,6 +345,60 @@
 
     .loading-overlay.visible { display: flex; }
 
+    .password-dialog {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
+      z-index: 201; align-items: center; justify-content: center;
+    }
+
+    .password-dialog.visible { display: flex; }
+
+    .password-box {
+      background: var(--white); padding: 36px 40px;
+      border-radius: var(--radius); box-shadow: var(--shadow-lg);
+      width: 340px; max-width: 90vw;
+    }
+
+    .password-box .pw-icon { font-size: 28px; text-align: center; margin-bottom: 12px; }
+
+    .password-box .pw-title {
+      font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 600;
+      color: var(--gray-800); text-align: center; margin-bottom: 6px;
+    }
+
+    .password-box .pw-msg {
+      font-size: 13px; color: var(--gray-500); text-align: center; margin-bottom: 20px;
+    }
+
+    .password-box input[type=password] {
+      width: 100%; padding: 10px 14px; border: 1.5px solid var(--gray-300);
+      border-radius: var(--radius-sm); font-size: 15px; outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .password-box input[type=password]:focus { border-color: var(--blue); }
+
+    .pw-error { font-size: 12px; color: var(--red); margin-top: 6px; min-height: 16px; }
+
+    .pw-actions { display: flex; gap: 10px; margin-top: 16px; }
+
+    .pw-actions button {
+      flex: 1; padding: 10px; border-radius: var(--radius-sm); font-size: 14px;
+      font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+    }
+
+    .btn-pw-cancel {
+      background: var(--gray-100); color: var(--gray-600);
+    }
+
+    .btn-pw-cancel:hover { background: var(--gray-200); }
+
+    .btn-pw-confirm {
+      background: var(--blue); color: var(--white);
+    }
+
+    .btn-pw-confirm:hover { background: var(--blue-light); }
+
     .loading-box {
       background: var(--white); padding: 40px;
       border-radius: var(--radius); text-align: center; box-shadow: var(--shadow-lg);
@@ -487,11 +541,11 @@
             <div class="card-title">Leituras do Medidor</div>
           </div>
           <div class="card-body">
-            <div class="data-row">
+            <div class="data-row" id="rowLeituraAnterior">
               <span class="data-label">Leitura Anterior</span>
               <span class="data-value" id="leituraAnterior">-</span>
             </div>
-            <div class="data-row">
+            <div class="data-row" id="rowLeituraAtual">
               <span class="data-label">Leitura Atual</span>
               <span class="data-value" id="leituraAtual">-</span>
             </div>
@@ -633,10 +687,25 @@
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-box">
       <div class="spinner"></div>
-      <div class="loading-text">Analisando PDF...</div>
+      <div class="loading-text" id="loadingText">Analisando PDF...</div>
     </div>
   </div>
 
+  <div class="password-dialog" id="passwordDialog">
+    <div class="password-box">
+      <div class="pw-icon">🔒</div>
+      <div class="pw-title">PDF protegido com senha</div>
+      <div class="pw-msg" id="pwMsg">Digite a senha para abrir o arquivo.</div>
+      <input type="password" id="passwordInput" placeholder="Senha do PDF" autocomplete="current-password">
+      <div class="pw-error" id="pwError"></div>
+      <div class="pw-actions">
+        <button class="btn-pw-cancel" id="btnPwCancel">Cancelar</button>
+        <button class="btn-pw-confirm" id="btnPwConfirm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" integrity="sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F" crossorigin="anonymous"></script>
   <script type="module">
     var pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
@@ -674,17 +743,68 @@
     btnRecalc.addEventListener('click', recalculate);
     btnWhatsapp.addEventListener('click', sendWhatsapp);
 
+    function askPassword(isRetry) {
+      return new Promise(function(resolve, reject) {
+        var dialog = document.getElementById('passwordDialog');
+        var input = document.getElementById('passwordInput');
+        var msg = document.getElementById('pwMsg');
+        var errEl = document.getElementById('pwError');
+        var confirmBtn = document.getElementById('btnPwConfirm');
+        var cancelBtn = document.getElementById('btnPwCancel');
+
+        msg.textContent = isRetry
+          ? 'Senha incorreta. Tente novamente:'
+          : 'Digite a senha para abrir o arquivo.';
+        errEl.textContent = isRetry ? 'Senha incorreta.' : '';
+        input.value = '';
+        dialog.classList.add('visible');
+        setTimeout(function() { input.focus(); }, 50);
+
+        function cleanup() {
+          dialog.classList.remove('visible');
+          confirmBtn.removeEventListener('click', onConfirm);
+          cancelBtn.removeEventListener('click', onCancel);
+          input.removeEventListener('keydown', onKey);
+        }
+
+        function onConfirm() { cleanup(); resolve(input.value); }
+        function onCancel() { cleanup(); reject(new Error('Cancelado')); }
+        function onKey(e) {
+          if (e.key === 'Enter') onConfirm();
+          if (e.key === 'Escape') onCancel();
+        }
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        input.addEventListener('keydown', onKey);
+      });
+    }
+
     async function handleFile(file) {
       if (file.type !== 'application/pdf') {
         showError('Por favor, envie um arquivo PDF.');
         return;
       }
       hideError();
-      showLoading(true);
+      showLoading('Analisando PDF...');
 
       try {
         var arrayBuffer = await file.arrayBuffer();
-        var pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        var userCancelled = false;
+        var loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        loadingTask.onPassword = function(updatePassword, reason) {
+          showLoading(false);
+          askPassword(reason === pdfjsLib.PasswordResponses.INCORRECT_PASSWORD)
+            .then(function(pwd) {
+              showLoading('Analisando PDF...');
+              updatePassword(pwd);
+            })
+            .catch(function() {
+              userCancelled = true;
+              updatePassword(new Error('Cancelado'));
+            });
+        };
+        var pdf = await loadingTask.promise;
         var fullText = '';
 
         for (var i = 1; i <= pdf.numPages; i++) {
@@ -695,6 +815,11 @@
         }
 
         extractedData = extractDataFromText(fullText);
+
+        if (!extractedData) {
+          fullText = await ocrPDF(pdf);
+          extractedData = extractDataFromText(fullText);
+        }
 
         if (!extractedData) {
           showError('Nao foi possivel extrair os dados da conta. Verifique se o PDF e uma conta de luz valida.');
@@ -711,9 +836,43 @@
         displayResults();
         showLoading(false);
       } catch (err) {
-        showError('Erro ao processar o PDF. Tente novamente.');
         showLoading(false);
+        if (!userCancelled) {
+          showError('Erro ao processar o PDF. Tente novamente.');
+        }
       }
+    }
+
+    async function ocrPDF(pdf) {
+      showLoading('Baixando leitor de imagem...');
+      var worker = await Tesseract.createWorker('por', 1, {
+        logger: function(m) {
+          if (m.status === 'recognizing text') {
+            showLoading('Lendo texto: ' + Math.round(m.progress * 100) + '%');
+          } else if (m.status === 'loading language traineddata') {
+            showLoading('Carregando dicionario...');
+          } else if (m.status === 'initializing api') {
+            showLoading('Iniciando OCR...');
+          }
+        }
+      });
+      var fullText = '';
+
+      for (var i = 1; i <= pdf.numPages; i++) {
+        showLoading('Renderizando pagina' + (pdf.numPages > 1 ? ' ' + i + '/' + pdf.numPages : '') + '...');
+        var page = await pdf.getPage(i);
+        var viewport = page.getViewport({ scale: 2.5 });
+        var canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+        var result = await worker.recognize(canvas);
+        fullText += result.data.text + '\n';
+      }
+
+      await worker.terminate();
+      showLoading('Extraindo dados...');
+      return fullText;
     }
 
     function extractDataFromText(text) {
@@ -770,13 +929,17 @@
       }
 
       if (!leituraAnterior || !leituraAtual) {
-        var medidorPattern = /(?:MEDIDOR|Medidor)[^]*?(\d[\d.]+[.,]\d{2})[^0-9]+(\d[\d.]+[.,]\d{2})/i;
+        // Meter readings are always large numbers (typically 4-6 digits before decimal).
+        // Using a minimum threshold of 500 to avoid confusing tax/charge values.
+        var medidorPattern = /(?:MEDIDOR|Medidor)[^]*?(\d[\d.]*[.,]\d{2})[^0-9]+(\d[\d.]*[.,]\d{2})/i;
         var mm = t.match(medidorPattern);
         if (mm) {
           var v1 = parseBRNumber(mm[1]);
           var v2 = parseBRNumber(mm[2]);
-          if (v1 < v2) { leituraAnterior = v1; leituraAtual = v2; }
-          else { leituraAnterior = v2; leituraAtual = v1; }
+          if (Math.max(v1, v2) > 500) {
+            if (v1 < v2) { leituraAnterior = v1; leituraAtual = v2; }
+            else { leituraAnterior = v2; leituraAtual = v1; }
+          }
         }
       }
 
@@ -786,14 +949,29 @@
         if (em) {
           var ev1 = parseBRNumber(em[1]);
           var ev2 = parseBRNumber(em[2]);
-          if (ev1 < ev2) { leituraAnterior = ev1; leituraAtual = ev2; }
-          else { leituraAnterior = ev2; leituraAtual = ev1; }
+          if (Math.max(ev1, ev2) > 500) {
+            if (ev1 < ev2) { leituraAnterior = ev1; leituraAtual = ev2; }
+            else { leituraAnterior = ev2; leituraAtual = ev1; }
+          }
         }
       }
 
-      // Extract Consumo
-      var consumoMatch = t.match(/[Cc]onsumo[^0-9]*?(\d{2,5})\s*(?:kWh|$)/);
-      if (consumoMatch) consumo = parseInt(consumoMatch[1], 10);
+      // Extract Consumo — primary: QUANT column of Consumo-TUSD row.
+      // Unit token is OCR-unreliable ("kWh" often reads as "kh"/"kWwh"), so skip
+      // up to 10 non-digit chars after TUSD and grab the kWh quantity (e.g. 298,23).
+      var tusdQuantMatch = t.match(/Consumo[\s\-]*TUSD[^\d]{0,10}(\d{1,4}[.,]\d{2})\b/i);
+      if (!tusdQuantMatch) {
+        tusdQuantMatch = t.match(/Consumo[\s\-]*TE[^\d]{0,10}(\d{1,4}[.,]\d{2})\b/i);
+      }
+      if (tusdQuantMatch) {
+        var qv = parseBRNumber(tusdQuantMatch[1]);
+        if (qv > 0 && qv < 100000) consumo = Math.round(qv);
+      }
+
+      if (!consumo) {
+        var consumoMatch = t.match(/[Cc]onsumo[^0-9]*?(\d{2,5})\s*(?:kWh|$)/);
+        if (consumoMatch) consumo = parseInt(consumoMatch[1], 10);
+      }
 
       if (!consumo && leituraAnterior && leituraAtual) {
         consumo = Math.round(leituraAtual - leituraAnterior);
@@ -840,6 +1018,9 @@
       if (!extractedData) return;
       resultsArea.classList.add('visible');
 
+      var temLeituras = extractedData.leituraAnterior > 0 && extractedData.leituraAtual > 0;
+      document.getElementById('rowLeituraAnterior').style.display = temLeituras ? 'flex' : 'none';
+      document.getElementById('rowLeituraAtual').style.display = temLeituras ? 'flex' : 'none';
       document.getElementById('leituraAnterior').textContent = formatBR(extractedData.leituraAnterior);
       document.getElementById('leituraAtual').textContent = formatBR(extractedData.leituraAtual);
       document.getElementById('consumoTotal').textContent = extractedData.consumo + ' kWh';
@@ -935,9 +1116,14 @@
       errorMsg.classList.remove('visible');
     }
 
-    function showLoading(show) {
-      if (show) loadingOverlay.classList.add('visible');
-      else loadingOverlay.classList.remove('visible');
+    function showLoading(msgOrFalse) {
+      var loadingText = document.getElementById('loadingText');
+      if (msgOrFalse === false) {
+        loadingOverlay.classList.remove('visible');
+      } else {
+        if (loadingText) loadingText.textContent = msgOrFalse || 'Analisando PDF...';
+        loadingOverlay.classList.add('visible');
+      }
     }
   </script>
 </body>
