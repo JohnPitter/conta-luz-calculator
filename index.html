@@ -596,7 +596,7 @@
               </div>
             </div>
             <div class="input-group">
-              <label class="input-label" for="valoresAdicionais">Valores Adicionais</label>
+              <label class="input-label" for="valoresAdicionais">Valores Adicionais (bandeira, GD, ilum. pública)</label>
               <div class="input-suffix" data-suffix="R$">
                 <input type="number" class="input-field" id="valoresAdicionais" value="0" min="0" step="0.01" placeholder="0,00">
               </div>
@@ -994,12 +994,27 @@
         consumo = Math.round(leituraAtual - leituraAnterior);
       }
 
+      // Encargos que NAO entram no desconto (nao sao consumo x TUSD+TE):
+      // bandeira tarifaria, custo de GD e iluminacao publica. Sao somados
+      // como "valores adicionais" para fechar com o total da fatura.
+      var encargos = 0;
+      var encargoPatterns = [
+        /Band[^\d]{0,20}(\d{1,3}[.,]\d{2})/i,         // Acres. Bandeira (Amarela/Vermelha)
+        /GD\s*I{1,2}[^\d]{0,15}(\d{1,3}[.,]\d{2})/i,  // TUSD GDI/GDII com trib.
+        /Ilum[^\d]{0,25}(\d{1,3}[.,]\d{2})/i          // Ilum. Publica Municipal
+      ];
+      for (var ei = 0; ei < encargoPatterns.length; ei++) {
+        var enc = t.match(encargoPatterns[ei]);
+        if (enc) encargos += parseBRNumber(enc[1]);
+      }
+
       return {
         leituraAnterior: leituraAnterior || 0,
         leituraAtual: leituraAtual || 0,
         consumo: consumo || 0,
         taxaTusd: taxaTusd || 0,
-        taxaTe: taxaTe || 0
+        taxaTe: taxaTe || 0,
+        encargos: Math.round(encargos * 100) / 100
       };
     }
 
@@ -1030,6 +1045,12 @@
 
       var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
       document.getElementById('totalTaxas').textContent = 'R$ ' + totalTaxas.toFixed(8);
+
+      // Pre-preenche os encargos da fatura (bandeira + GD + ilum. publica),
+      // que sao os "valores adicionais" reais — editavel pelo usuario.
+      if (extractedData.encargos > 0) {
+        document.getElementById('valoresAdicionais').value = extractedData.encargos.toFixed(2);
+      }
 
       recalculate();
 
