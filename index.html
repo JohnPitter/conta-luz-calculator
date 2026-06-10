@@ -1025,11 +1025,11 @@
       document.getElementById('leituraAtual').textContent = formatBR(extractedData.leituraAtual);
       document.getElementById('consumoTotal').textContent = extractedData.consumo + ' kWh';
 
-      document.getElementById('taxaTusd').textContent = 'R$ ' + extractedData.taxaTusd.toFixed(8);
-      document.getElementById('taxaTe').textContent = 'R$ ' + extractedData.taxaTe.toFixed(8);
+      document.getElementById('taxaTusd').textContent = 'R$ ' + extractedData.taxaTusd.toFixed(4).replace('.', ',');
+      document.getElementById('taxaTe').textContent = 'R$ ' + extractedData.taxaTe.toFixed(4).replace('.', ',');
 
       var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
-      document.getElementById('totalTaxas').textContent = 'R$ ' + totalTaxas.toFixed(8);
+      document.getElementById('totalTaxas').textContent = 'R$ ' + totalTaxas.toFixed(4).replace('.', ',');
 
       recalculate();
 
