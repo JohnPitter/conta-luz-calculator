@@ -550,8 +550,16 @@
               <span class="data-value" id="leituraAtual">-</span>
             </div>
             <div class="data-row">
-              <span class="data-label">Consumo Total</span>
+              <span class="data-label" id="consumoLabel">Consumo Total</span>
               <span class="data-value highlight" id="consumoTotal">-</span>
+            </div>
+            <div class="data-row" id="rowGeracao">
+              <span class="data-label">Geração solar (compensada)</span>
+              <span class="data-value" id="geracao" style="color: var(--green-dark);">-</span>
+            </div>
+            <div class="data-row" id="rowFaturado">
+              <span class="data-label">Consumo faturado (Neoenergia)</span>
+              <span class="data-value" id="consumoFaturado">-</span>
             </div>
           </div>
         </div>
@@ -956,30 +964,35 @@
         }
       }
 
-      // Extract Consumo — primary: QUANT column of Consumo-TUSD row.
-      // Unit token is OCR-unreliable ("kWh" often reads as "kh"/"kWwh"), so skip
-      // up to 10 non-digit chars after TUSD and grab the kWh quantity (e.g. 298,23).
+      // Consumo faturado: coluna QUANT da linha Consumo-TUSD/TE. O token de
+      // unidade e instavel no OCR ("kWh" vira "kh"), entao pulamos ate 10
+      // nao-digitos depois de TUSD e pegamos a quantidade (ex.: 298,23).
+      var consumoFaturado = null;
       var tusdQuantMatch = t.match(/Consumo[\s\-]*TUSD[^\d]{0,10}(\d{1,4}[.,]\d{2})\b/i);
       if (!tusdQuantMatch) {
         tusdQuantMatch = t.match(/Consumo[\s\-]*TE[^\d]{0,10}(\d{1,4}[.,]\d{2})\b/i);
       }
       if (tusdQuantMatch) {
         var qv = parseBRNumber(tusdQuantMatch[1]);
-        if (qv > 0 && qv < 100000) consumo = Math.round(qv);
+        if (qv > 0 && qv < 100000) consumoFaturado = qv;
       }
 
-      if (!consumo) {
-        var consumoMatch = t.match(/[Cc]onsumo[^0-9]*?(\d{2,5})\s*(?:kWh|$)/);
-        if (consumoMatch) consumo = parseInt(consumoMatch[1], 10);
-      }
+      // Compensacao de geracao distribuida (solar): a fatura abate do consumo
+      // a energia compensada ("CAT de - 279,77 kWh"). O consumo MEDIDO (bruto,
+      // que gira no relogio) = faturado + compensacao.
+      var compensacao = 0;
+      var catMatch = t.match(/CAT\s*de\s*[-−]?\s*([\d.,]+)\s*kWh/i);
+      if (catMatch) compensacao = parseBRNumber(catMatch[1]);
 
-      if (!consumo && leituraAnterior && leituraAtual) {
+      // Consumo MEDIDO (o que o cliente quer ver/calcular):
+      // 1) diferenca das leituras, se o OCR conseguir le-las;
+      // 2) senao, reconstroi via faturado + compensacao (matematicamente igual,
+      //    e bem mais confiavel que ler a linha fina do medidor);
+      // 3) senao, cai no proprio faturado.
+      if (leituraAnterior && leituraAtual && leituraAtual > leituraAnterior) {
         consumo = Math.round(leituraAtual - leituraAnterior);
-      }
-
-      if (!consumo) {
-        var catMatch = t.match(/CAT[^0-9]*?(\d{2,5})\s*kWh/i);
-        if (catMatch) consumo = parseInt(catMatch[1], 10);
+      } else if (consumoFaturado) {
+        consumo = Math.round(consumoFaturado + compensacao);
       }
 
       if (!consumo) {
@@ -988,16 +1001,14 @@
       }
 
       if (!taxaTusd && !taxaTe) return null;
-      if (!consumo && (!leituraAnterior || !leituraAtual)) return null;
-
-      if (!consumo && leituraAnterior && leituraAtual) {
-        consumo = Math.round(leituraAtual - leituraAnterior);
-      }
+      if (!consumo) return null;
 
       return {
         leituraAnterior: leituraAnterior || 0,
         leituraAtual: leituraAtual || 0,
         consumo: consumo || 0,
+        consumoFaturado: consumoFaturado ? Math.round(consumoFaturado) : 0,
+        geracao: compensacao || 0,
         taxaTusd: taxaTusd || 0,
         taxaTe: taxaTe || 0
       };
@@ -1024,6 +1035,15 @@
       document.getElementById('leituraAnterior').textContent = formatBR(extractedData.leituraAnterior);
       document.getElementById('leituraAtual').textContent = formatBR(extractedData.leituraAtual);
       document.getElementById('consumoTotal').textContent = extractedData.consumo + ' kWh';
+
+      // Detalhamento da geracao solar: consumo medido (bruto) = faturado + geracao.
+      // So mostra quando ha compensacao solar; senao o consumo ja e o faturado.
+      var temGeracao = extractedData.geracao > 0 && extractedData.consumoFaturado > 0;
+      document.getElementById('consumoLabel').textContent = temGeracao ? 'Consumo medido (total)' : 'Consumo Total';
+      document.getElementById('rowGeracao').style.display = temGeracao ? 'flex' : 'none';
+      document.getElementById('rowFaturado').style.display = temGeracao ? 'flex' : 'none';
+      document.getElementById('geracao').textContent = '- ' + extractedData.geracao.toFixed(2).replace('.', ',') + ' kWh';
+      document.getElementById('consumoFaturado').textContent = extractedData.consumoFaturado + ' kWh';
 
       document.getElementById('taxaTusd').textContent = 'R$ ' + extractedData.taxaTusd.toFixed(4).replace('.', ',');
       document.getElementById('taxaTe').textContent = 'R$ ' + extractedData.taxaTe.toFixed(4).replace('.', ',');
