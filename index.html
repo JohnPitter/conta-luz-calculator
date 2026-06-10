@@ -1107,9 +1107,15 @@
       var valorPorPessoa = valorFinal / pessoas;
 
       var msg = '*Resumo da Conta de Luz*\n\n';
-      msg += 'Consumo: ' + extractedData.consumo + ' kWh\n';
-      msg += 'Taxa TUSD: R$ ' + extractedData.taxaTusd.toFixed(8) + '\n';
-      msg += 'Taxa TE: R$ ' + extractedData.taxaTe.toFixed(8) + '\n\n';
+      if (extractedData.geracao > 0 && extractedData.consumoFaturado > 0) {
+        msg += 'Consumo medido: ' + extractedData.consumo + ' kWh\n';
+        msg += 'Geração solar: - ' + extractedData.geracao.toFixed(2).replace('.', ',') + ' kWh\n';
+        msg += 'Consumo faturado: ' + extractedData.consumoFaturado + ' kWh\n';
+      } else {
+        msg += 'Consumo: ' + extractedData.consumo + ' kWh\n';
+      }
+      msg += 'Taxa TUSD: R$ ' + extractedData.taxaTusd.toFixed(4).replace('.', ',') + '\n';
+      msg += 'Taxa TE: R$ ' + extractedData.taxaTe.toFixed(4).replace('.', ',') + '\n\n';
       msg += 'Valor Bruto: R$ ' + valorBruto.toFixed(2) + '\n';
       msg += 'Desconto (' + desconto + '%): - R$ ' + valorDescontoAmt.toFixed(2) + '\n';
       msg += 'Valor c/ Desconto: R$ ' + valorComDesconto.toFixed(2) + '\n';
