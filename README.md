@@ -14,6 +14,7 @@
 
 [Acessar Calculadora](https://johnpitter.github.io/conta-luz-calculator/) •
 [Como Funciona](#como-funciona) •
+[Geracao Solar](#geracao-distribuida-solar) •
 [Calculo](#calculo) •
 [Privacidade](#privacidade)
 
@@ -26,9 +27,11 @@
 Ferramenta 100% client-side que extrai automaticamente os dados da sua fatura de energia e calcula o valor por pessoa. Nenhum dado e enviado para servidores — todo o processamento ocorre no seu navegador.
 
 **O que voce obtem:**
-- **Leituras** — Leitura anterior, atual e consumo total em kWh
-- **Taxas** — TUSD e TE extraidas com precisao total (8 casas decimais)
-- **Calculos** — Valor bruto, desconto percentual e divisao por pessoa
+- **Leituras e consumo** — Leitura anterior, atual e consumo do periodo em kWh
+- **Geracao distribuida** — Detalha consumo medido, energia solar compensada e consumo faturado
+- **Taxas** — TUSD e TE extraidas com precisao total (calculo) e exibidas com 4 casas decimais
+- **Calculos** — Valor bruto, desconto percentual, valores adicionais e divisao por pessoa
+- **Compartilhamento** — Envio do resumo pronto via WhatsApp
 - **Privacidade** — Zero armazenamento, zero rastreamento, zero coleta
 
 ---
@@ -36,9 +39,14 @@ Ferramenta 100% client-side que extrai automaticamente os dados da sua fatura de
 ## Como Funciona
 
 1. Faca upload do PDF da conta de luz (arrastar ou clicar)
-2. O sistema extrai automaticamente leituras e taxas do PDF
-3. Informe o percentual de desconto e o numero de pessoas na casa
-4. Veja o resultado final por pessoa
+2. Se o PDF estiver protegido, informe a senha quando solicitada
+3. O sistema extrai automaticamente leituras e taxas:
+   - PDFs com texto: leitura direta
+   - PDFs em imagem (DANFE da Neoenergia): leitura via **OCR** automatico
+4. Informe o percentual de desconto, o numero de pessoas e os valores adicionais
+5. Veja o resultado por pessoa e, se quiser, envie o resumo via WhatsApp
+
+> Faturas da Neoenergia costumam ser **PDFs de imagem** (sem texto selecionavel). Nesses casos o app renderiza cada pagina e aplica OCR (Tesseract.js) automaticamente — a primeira leitura baixa o dicionario de portugues (~10 MB) e fica em cache para as proximas.
 
 ---
 
@@ -46,34 +54,57 @@ Ferramenta 100% client-side que extrai automaticamente os dados da sua fatura de
 
 | Campo | Descricao | Exemplo |
 |-------|-----------|---------|
-| Leitura Anterior | Registro do medidor no inicio do periodo | 9.251 |
-| Leitura Atual | Registro do medidor no final do periodo | 10.049 |
-| Consumo (kWh) | Diferenca entre leituras | 798 |
-| Taxa TUSD | Tarifa de Uso do Sistema de Distribuicao | R$ 0,52040968 |
-| Taxa TE | Tarifa de Energia | R$ 0,30022404 |
+| Leitura Anterior | Registro do medidor no inicio do periodo | 12.348 |
+| Leitura Atual | Registro do medidor no final do periodo | 12.926 |
+| Consumo medido (total) | Diferenca das leituras (consumo bruto do relogio) | 578 kWh |
+| Geracao solar (compensada) | Energia abatida pela geracao distribuida (linha CAT) | - 279,77 kWh |
+| Consumo faturado | O que a distribuidora cobra (medido - geracao) | 298 kWh |
+| Taxa TUSD | Tarifa de Uso do Sistema de Distribuicao | R$ 0,7190 |
+| Taxa TE | Tarifa de Energia | R$ 0,3542 |
+
+---
+
+## Geracao Distribuida (Solar)
+
+Contas com **geracao distribuida** (energia solar compartilhada) tem o consumo medido no relogio **maior** que o consumo faturado: a fatura abate a energia que a geracao solar compensou. Esse abatimento aparece na fatura como uma linha do tipo `CAT de - X kWh`.
+
+```
+Consumo medido (relogio)   = Leitura Atual - Leitura Anterior   (ex.: 12.926 - 12.348 = 578 kWh)
+Geracao solar compensada   = ajuste CAT da fatura               (ex.: 279,77 kWh)
+Consumo faturado           = Medido - Geracao                   (ex.: 578 - 279,77 = 298 kWh)
+```
+
+O calculo usa o **consumo medido (bruto)**, pois inclui a energia da geracao solar que tambem e paga. Quando o OCR nao consegue ler a linha fina do medidor, o consumo medido e reconstruido de forma confiavel como `faturado + geracao compensada` (matematicamente equivalente a diferenca das leituras).
+
+Em contas **sem** geracao distribuida (sem linha CAT), o consumo medido e igual ao faturado e o detalhamento solar nao aparece.
 
 ---
 
 ## Calculo
 
 ```
-Total Taxas       = TUSD + TE
-Valor Bruto       = Consumo (kWh) x Total Taxas
+Total Taxas        = TUSD + TE
+Valor Bruto        = Consumo medido (kWh) x Total Taxas
 Valor com Desconto = Valor Bruto - (Valor Bruto x Desconto%)
-Valor por Pessoa  = Valor com Desconto / Total de Pessoas
+Valor Final        = Valor com Desconto + Valores Adicionais
+Valor por Pessoa   = Valor Final / Total de Pessoas
 ```
+
+O campo **Valores Adicionais** soma encargos/valores que ficam fora da energia descontada — por exemplo, no modelo de geracao compartilhada, a conta cheia paga a distribuidora.
 
 ### Exemplo
 
+Fatura de junho (578 kWh medidos, desconto 30%, 2 pessoas, sem valores adicionais):
+
 | Etapa | Formula | Resultado |
 |-------|---------|-----------|
-| Total Taxas | 0,52040968 + 0,30022404 | R$ 0,82063372 |
-| Valor Bruto | 798 x 0,82063372 | R$ 654,87 |
-| Desconto 30% | 654,87 x 0,30 | - R$ 196,46 |
-| Valor com Desconto | 654,87 - 196,46 | R$ 458,41 |
-| Valor por Pessoa (2) | 458,41 / 2 | **R$ 229,20** |
+| Total Taxas | 0,71902181 + 0,35419760 | R$ 1,07321941 |
+| Valor Bruto | 578 x 1,07321941 | R$ 620,32 |
+| Desconto 30% | 620,32 x 0,30 | - R$ 186,10 |
+| Valor com Desconto | 620,32 - 186,10 | R$ 434,22 |
+| Valor por Pessoa (2) | 434,22 / 2 | **R$ 217,11** |
 
-> Os calculos utilizam os valores exatos extraidos do PDF (8 casas decimais), sem arredondamento intermediario. Apenas o resultado final e arredondado para 2 casas.
+> Os calculos utilizam os valores exatos extraidos do PDF (precisao total), sem arredondamento intermediario. As taxas sao apenas **exibidas** com 4 casas decimais; o resultado final e arredondado para 2 casas.
 
 ---
 
@@ -83,6 +114,7 @@ Valor por Pessoa  = Valor com Desconto / Total de Pessoas
 |------------|-----|
 | HTML / CSS / JS | Interface e logica da aplicacao |
 | [PDF.js](https://mozilla.github.io/pdf.js/) | Leitura e parsing do PDF no navegador |
+| [Tesseract.js](https://tesseract.projectnaptha.com/) | OCR de PDFs em imagem (DANFE), 100% no navegador |
 | GitHub Pages | Hospedagem estatica |
 | Google Fonts | Tipografia (Outfit + DM Sans) |
 
@@ -95,6 +127,8 @@ Valor por Pessoa  = Valor com Desconto / Total de Pessoas
 | Armazenamento | Nenhum dado e salvo, coletado ou enviado |
 | Processamento | 100% no navegador do usuario (client-side) |
 | PDF | Lido em memoria e descartado apos extracao |
+| OCR | Executado localmente; apenas o dicionario do Tesseract e baixado/cacheado |
+| Senha do PDF | Usada apenas em memoria para abrir o arquivo; nunca armazenada |
 | Cookies | Nenhum cookie utilizado |
 | Analytics | Nenhum rastreador de usuario |
 
@@ -131,6 +165,8 @@ python -m http.server 8080
 ```
 
 Acesse `http://localhost:8080`
+
+> O OCR depende de recursos carregados via CDN (Tesseract.js e PDF.js) e do download do dicionario de portugues, entao a leitura de PDFs em imagem precisa de conexao com a internet.
 
 ---
 
