@@ -1195,6 +1195,11 @@
       if (extractedData.dataLeituraAnterior && extractedData.dataLeituraAtual) {
         msg += 'Período: ' + extractedData.dataLeituraAnterior + ' a ' + extractedData.dataLeituraAtual + '\n';
       }
+      if (extractedData.diasFaturados) msg += 'Dias faturados: ' + extractedData.diasFaturados + '\n';
+      if (extractedData.proximaLeitura) msg += 'Próxima leitura: ' + extractedData.proximaLeitura + '\n';
+      if (extractedData.classificacao) msg += 'Classificação: ' + extractedData.classificacao + '\n';
+      if (extractedData.bandeira) msg += 'Bandeira: ' + extractedData.bandeira + '\n';
+      if (extractedData.totalFatura) msg += 'Total da fatura: R$ ' + extractedData.totalFatura.toFixed(2).replace('.', ',') + '\n';
       msg += '\n';
       if (extractedData.geracao > 0 && extractedData.consumoFaturado > 0) {
         msg += 'Consumo medido: ' + extractedData.consumo + ' kWh\n';
