@@ -535,6 +535,47 @@
 
     <div class="results-area" id="resultsArea">
       <div class="cards-grid">
+        <div class="card animate-in" id="cardInfoConta">
+          <div class="card-header">
+            <div class="card-header-icon blue">&#128203;</div>
+            <div class="card-title">Informações da Conta</div>
+          </div>
+          <div class="card-body">
+            <div class="data-row" id="rowMesRef">
+              <span class="data-label">Mês de referência</span>
+              <span class="data-value" id="mesReferencia">-</span>
+            </div>
+            <div class="data-row" id="rowVencimento">
+              <span class="data-label">Vencimento</span>
+              <span class="data-value" id="vencimento">-</span>
+            </div>
+            <div class="data-row" id="rowPeriodo">
+              <span class="data-label">Período de leitura</span>
+              <span class="data-value" id="periodoLeitura">-</span>
+            </div>
+            <div class="data-row" id="rowDias">
+              <span class="data-label">Dias faturados</span>
+              <span class="data-value" id="diasFaturados">-</span>
+            </div>
+            <div class="data-row" id="rowProxLeitura">
+              <span class="data-label">Próxima leitura</span>
+              <span class="data-value" id="proximaLeitura">-</span>
+            </div>
+            <div class="data-row" id="rowClassificacao">
+              <span class="data-label">Classificação</span>
+              <span class="data-value" id="classificacao">-</span>
+            </div>
+            <div class="data-row" id="rowBandeira">
+              <span class="data-label">Bandeira tarifária</span>
+              <span class="data-value" id="bandeira">-</span>
+            </div>
+            <div class="data-row" id="rowTotalFatura">
+              <span class="data-label">Total da fatura</span>
+              <span class="data-value highlight" id="totalFatura">-</span>
+            </div>
+          </div>
+        </div>
+
         <div class="card animate-in">
           <div class="card-header">
             <div class="card-header-icon blue">&#128202;</div>
@@ -1003,6 +1044,19 @@
       if (!taxaTusd && !taxaTe) return null;
       if (!consumo) return null;
 
+      // Informacoes gerais da fatura (cabecalho) — texto em fonte maior,
+      // lido de forma confiavel pelo OCR.
+      function matchStr(re) { var m = t.match(re); return m ? m[1].trim() : ''; }
+      var mesReferencia = matchStr(/MES\s*\/?\s*ANO[\s\S]{0,80}?(\d{2}\/\d{4})\b/i);
+      var vencimento = matchStr(/VENCIMENTO[\s\S]{0,80}?(\d{2}\/\d{2}\/\d{4})/i);
+      var totalFatura = parseBRNumber(matchStr(/TOTAL\s*A\s*PAGAR[\s\S]{0,60}?(\d{1,3}(?:\.\d{3})*,\d{2})/i));
+      var dataLeituraAnterior = matchStr(/LEITURA\s*ANTERIOR\s*(\d{2}\/\d{2}\/\d{4})/i);
+      var dataLeituraAtual = matchStr(/LEITURA\s*ATUAL\s*(\d{2}\/\d{2}\/\d{4})/i);
+      var diasFaturados = matchStr(/DE\s*DIAS\s*(\d{1,3})/i);
+      var proximaLeitura = matchStr(/PR[OÓ]XIMA\s*LEITURA\s*(\d{2}\/\d{2}\/\d{4})/i);
+      var bandeira = matchStr(/Band[^\n]{0,20}?(AMARELA|VERMELHA|VERDE)/i);
+      var classificacao = matchStr(/CLASSIFICA[ÇC][AÃ]O[:\s]*([A-Z0-9]+\s+[A-Z]+)/i);
+
       return {
         leituraAnterior: leituraAnterior || 0,
         leituraAtual: leituraAtual || 0,
@@ -1010,7 +1064,16 @@
         consumoFaturado: consumoFaturado ? Math.round(consumoFaturado) : 0,
         geracao: compensacao || 0,
         taxaTusd: taxaTusd || 0,
-        taxaTe: taxaTe || 0
+        taxaTe: taxaTe || 0,
+        mesReferencia: mesReferencia,
+        vencimento: vencimento,
+        totalFatura: totalFatura,
+        dataLeituraAnterior: dataLeituraAnterior,
+        dataLeituraAtual: dataLeituraAtual,
+        diasFaturados: diasFaturados,
+        proximaLeitura: proximaLeitura,
+        bandeira: bandeira,
+        classificacao: classificacao
       };
     }
 
@@ -1028,6 +1091,26 @@
     function displayResults() {
       if (!extractedData) return;
       resultsArea.classList.add('visible');
+
+      // Informacoes gerais da fatura — cada linha so aparece se foi extraida.
+      function setInfoRow(rowId, valueId, value) {
+        var has = value !== undefined && value !== null && value !== '' && value !== 0;
+        document.getElementById(rowId).style.display = has ? 'flex' : 'none';
+        if (has) document.getElementById(valueId).textContent = value;
+      }
+      setInfoRow('rowMesRef', 'mesReferencia', extractedData.mesReferencia);
+      setInfoRow('rowVencimento', 'vencimento', extractedData.vencimento);
+      var periodo = (extractedData.dataLeituraAnterior && extractedData.dataLeituraAtual)
+        ? extractedData.dataLeituraAnterior + ' a ' + extractedData.dataLeituraAtual : '';
+      setInfoRow('rowPeriodo', 'periodoLeitura', periodo);
+      setInfoRow('rowDias', 'diasFaturados', extractedData.diasFaturados ? extractedData.diasFaturados + ' dias' : '');
+      setInfoRow('rowProxLeitura', 'proximaLeitura', extractedData.proximaLeitura);
+      setInfoRow('rowClassificacao', 'classificacao', extractedData.classificacao);
+      setInfoRow('rowBandeira', 'bandeira', extractedData.bandeira);
+      setInfoRow('rowTotalFatura', 'totalFatura', extractedData.totalFatura ? 'R$ ' + extractedData.totalFatura.toFixed(2).replace('.', ',') : '');
+      // Esconde o card inteiro se nada foi extraido do cabecalho.
+      var temInfo = extractedData.mesReferencia || extractedData.vencimento || periodo || extractedData.totalFatura;
+      document.getElementById('cardInfoConta').style.display = temInfo ? '' : 'none';
 
       var temLeituras = extractedData.leituraAnterior > 0 && extractedData.leituraAtual > 0;
       document.getElementById('rowLeituraAnterior').style.display = temLeituras ? 'flex' : 'none';
@@ -1106,7 +1189,13 @@
       var valorFinal = valorComDesconto + adicionais;
       var valorPorPessoa = valorFinal / pessoas;
 
-      var msg = '*Resumo da Conta de Luz*\n\n';
+      var msg = '*Resumo da Conta de Luz*\n';
+      if (extractedData.mesReferencia) msg += 'Referência: ' + extractedData.mesReferencia + '\n';
+      if (extractedData.vencimento) msg += 'Vencimento: ' + extractedData.vencimento + '\n';
+      if (extractedData.dataLeituraAnterior && extractedData.dataLeituraAtual) {
+        msg += 'Período: ' + extractedData.dataLeituraAnterior + ' a ' + extractedData.dataLeituraAtual + '\n';
+      }
+      msg += '\n';
       if (extractedData.geracao > 0 && extractedData.consumoFaturado > 0) {
         msg += 'Consumo medido: ' + extractedData.consumo + ' kWh\n';
         msg += 'Geração solar: - ' + extractedData.geracao.toFixed(2).replace('.', ',') + ' kWh\n';
