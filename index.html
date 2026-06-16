@@ -661,7 +661,7 @@
           </div>
           <div class="card-body">
             <div class="data-row">
-              <span class="data-label">Valor Bruto (kWh x taxas)</span>
+              <span class="data-label" id="valorBrutoLabel">Valor Bruto (kWh x taxas)</span>
               <span class="data-value" id="valorBruto">-</span>
             </div>
             <div class="data-row">
@@ -1142,19 +1142,29 @@
       }, 100);
     }
 
+    // Quando ha geracao solar, o desconto incide apenas sobre os kWh gerados
+    // pelo solar (compensacao). Os kWh que ultrapassaram a geracao ja estao na
+    // conta da Neoenergia, informada em "valores adicionais".
+    function consumoParaCalculo() {
+      return extractedData.geracao > 0 ? extractedData.geracao : extractedData.consumo;
+    }
+
     function recalculate() {
       if (!extractedData) return;
       var desconto = parseFloat(document.getElementById('desconto').value) || 0;
       var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
       var adicionais = parseFloat(document.getElementById('valoresAdicionais').value) || 0;
 
+      var consumoCalc = consumoParaCalculo();
       var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
-      var valorBruto = extractedData.consumo * totalTaxas;
+      var valorBruto = consumoCalc * totalTaxas;
       var valorDescontoAmt = valorBruto * (desconto / 100);
       var valorComDesconto = valorBruto - valorDescontoAmt;
       var valorFinal = valorComDesconto + adicionais;
       var valorPorPessoa = valorFinal / pessoas;
 
+      var kwhFmt = (consumoCalc % 1 === 0) ? consumoCalc : consumoCalc.toFixed(2).replace('.', ',');
+      document.getElementById('valorBrutoLabel').textContent = 'Valor Bruto (' + kwhFmt + ' kWh x taxas)';
       document.getElementById('valorBruto').textContent = 'R$ ' + valorBruto.toFixed(2);
       document.getElementById('valorDesconto').textContent = '- R$ ' + valorDescontoAmt.toFixed(2);
       document.getElementById('valorComDesconto').textContent = 'R$ ' + valorComDesconto.toFixed(2);
@@ -1182,8 +1192,9 @@
       var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
       var adicionais = parseFloat(document.getElementById('valoresAdicionais').value) || 0;
 
+      var consumoCalc = consumoParaCalculo();
       var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
-      var valorBruto = extractedData.consumo * totalTaxas;
+      var valorBruto = consumoCalc * totalTaxas;
       var valorDescontoAmt = valorBruto * (desconto / 100);
       var valorComDesconto = valorBruto - valorDescontoAmt;
       var valorFinal = valorComDesconto + adicionais;
