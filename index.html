@@ -644,12 +644,6 @@
                 <input type="number" class="input-field" id="pessoas" value="2" min="1" max="20" step="1">
               </div>
             </div>
-            <div class="input-group">
-              <label class="input-label" for="valoresAdicionais">Valores Adicionais</label>
-              <div class="input-suffix" data-suffix="R$">
-                <input type="number" class="input-field" id="valoresAdicionais" value="0" min="0" step="0.01" placeholder="0,00">
-              </div>
-            </div>
             <button class="btn-recalc" id="btnRecalc">Recalcular</button>
           </div>
         </div>
@@ -673,7 +667,7 @@
               <span class="data-value" id="valorComDesconto">-</span>
             </div>
             <div class="data-row" id="rowAdicionais" style="display: none;">
-              <span class="data-label">Valores Adicionais</span>
+              <span class="data-label">Conta Neoenergia (fatura)</span>
               <span class="data-value amber" id="valorAdicionais">-</span>
             </div>
             <div class="data-row" id="rowTotal" style="display: none;">
@@ -1153,7 +1147,7 @@
       if (!extractedData) return;
       var desconto = parseFloat(document.getElementById('desconto').value) || 0;
       var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
-      var adicionais = parseFloat(document.getElementById('valoresAdicionais').value) || 0;
+      var adicionais = extractedData.totalFatura || 0;
 
       var consumoCalc = consumoParaCalculo();
       var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
@@ -1190,7 +1184,7 @@
       if (!extractedData) return;
       var desconto = parseFloat(document.getElementById('desconto').value) || 0;
       var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
-      var adicionais = parseFloat(document.getElementById('valoresAdicionais').value) || 0;
+      var adicionais = extractedData.totalFatura || 0;
 
       var consumoCalc = consumoParaCalculo();
       var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
@@ -1225,7 +1219,7 @@
       msg += 'Desconto (' + desconto + '%): - R$ ' + valorDescontoAmt.toFixed(2) + '\n';
       msg += 'Valor c/ Desconto: R$ ' + valorComDesconto.toFixed(2) + '\n';
       if (adicionais > 0) {
-        msg += 'Valores Adicionais: + R$ ' + adicionais.toFixed(2) + '\n';
+        msg += 'Conta Neoenergia: + R$ ' + adicionais.toFixed(2) + '\n';
         msg += 'Total Final: R$ ' + valorFinal.toFixed(2) + '\n';
       }
       msg += '\n*Valor por pessoa (' + pessoas + '): R$ ' + valorPorPessoa.toFixed(2) + '*';
