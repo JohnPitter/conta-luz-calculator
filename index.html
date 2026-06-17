@@ -1177,7 +1177,7 @@
       // Detalhamento da geracao solar so aparece no modo solar (consumo medido =
       // faturado + geracao). No modo classico, mostra o consumo faturado direto.
       var temGeracao = modoCalculo === 'solar' && extractedData.geracao > 0 && extractedData.consumoFaturado > 0;
-      document.getElementById('consumoTotal').textContent = (temGeracao ? extractedData.consumo : (extractedData.consumoFaturado || extractedData.consumo)) + ' kWh';
+      document.getElementById('consumoTotal').textContent = extractedData.consumo + ' kWh';
       document.getElementById('consumoLabel').textContent = temGeracao ? 'Consumo medido (total)' : 'Consumo Total';
       document.getElementById('rowGeracao').style.display = temGeracao ? 'flex' : 'none';
       document.getElementById('rowFaturado').style.display = temGeracao ? 'flex' : 'none';
@@ -1198,10 +1198,11 @@
 
     // Modo solar: o desconto incide apenas sobre os kWh gerados pelo solar
     // (os kWh que ultrapassaram ja estao na conta da Neoenergia, somada a parte).
-    // Modo classico: usa o consumo faturado da conta (leitura comum).
+    // Modo classico: usa o consumo medido (leitura atual - anterior), a leitura
+    // comum do medidor.
     function consumoParaCalculo() {
       if (modoCalculo === 'solar' && extractedData.geracao > 0) return extractedData.geracao;
-      return extractedData.consumoFaturado || extractedData.consumo;
+      return extractedData.consumo;
     }
 
     // Trunca para 2 casas decimais (sem arredondar). As tarifas e valores sao
@@ -1284,7 +1285,7 @@
         msg += 'Geração solar: - ' + extractedData.geracao.toFixed(2).replace('.', ',') + ' kWh\n';
         msg += 'Consumo faturado: ' + extractedData.consumoFaturado + ' kWh\n';
       } else {
-        msg += 'Consumo: ' + (extractedData.consumoFaturado || extractedData.consumo) + ' kWh\n';
+        msg += 'Consumo: ' + extractedData.consumo + ' kWh\n';
       }
       msg += 'Taxa TUSD: R$ ' + trunc2(extractedData.taxaTusd).toFixed(2).replace('.', ',') + '\n';
       msg += 'Taxa TE: R$ ' + trunc2(extractedData.taxaTe).toFixed(2).replace('.', ',') + '\n';
