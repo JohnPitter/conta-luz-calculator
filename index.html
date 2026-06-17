@@ -399,6 +399,29 @@
 
     .btn-pw-confirm:hover { background: var(--blue-light); }
 
+    .mode-option {
+      display: block; width: 100%; text-align: left;
+      padding: 14px 16px; margin-top: 10px;
+      border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm);
+      background: var(--white); cursor: pointer; transition: all 0.15s;
+    }
+
+    .mode-option:hover { border-color: var(--blue); background: rgba(37,99,235,0.04); }
+
+    .mode-option .mode-title {
+      font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 600;
+      color: var(--gray-800); margin-bottom: 2px;
+    }
+
+    .mode-option .mode-desc { font-size: 12px; color: var(--gray-500); }
+
+    .mode-badge {
+      display: inline-block; margin-left: 6px; padding: 1px 7px;
+      font-size: 10px; font-weight: 600; border-radius: 10px;
+      background: rgba(16,185,129,0.15); color: var(--green-dark);
+      vertical-align: middle;
+    }
+
     .loading-box {
       background: var(--white); padding: 40px;
       border-radius: var(--radius); text-align: center; box-shadow: var(--shadow-lg);
@@ -748,6 +771,22 @@
     </div>
   </div>
 
+  <div class="password-dialog" id="modeDialog">
+    <div class="password-box">
+      <div class="pw-icon">⚡</div>
+      <div class="pw-title">Como calcular esta conta?</div>
+      <div class="pw-msg">Escolha o tipo de leitura da fatura.</div>
+      <button class="mode-option" id="btnModeClassico">
+        <div class="mode-title">Conta comum</div>
+        <div class="mode-desc">Leitura clássica: consumo da fatura × tarifas, com desconto e divisão por pessoa.</div>
+      </button>
+      <button class="mode-option" id="btnModeSolar">
+        <div class="mode-title">Energia solar<span class="mode-badge" id="modeSolarBadge" style="display:none;">detectada</span></div>
+        <div class="mode-desc">Geração compartilhada: desconto sobre os kWh gerados + conta da Neoenergia.</div>
+      </button>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" integrity="sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F" crossorigin="anonymous"></script>
   <script type="module">
     var pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
@@ -765,6 +804,7 @@
     var btnRecalc = document.getElementById('btnRecalc');
 
     var extractedData = null;
+    var modoCalculo = 'classico';
 
     uploadZone.addEventListener('click', function() { fileInput.click(); });
     fileInput.addEventListener('change', function(e) {
@@ -785,6 +825,28 @@
     var btnWhatsapp = document.getElementById('btnWhatsapp');
     btnRecalc.addEventListener('click', recalculate);
     btnWhatsapp.addEventListener('click', sendWhatsapp);
+
+    function askModo() {
+      var dialog = document.getElementById('modeDialog');
+      var solarBtn = document.getElementById('btnModeSolar');
+      var classicoBtn = document.getElementById('btnModeClassico');
+      // Sinaliza quando ha geracao solar detectada na conta.
+      document.getElementById('modeSolarBadge').style.display =
+        extractedData.geracao > 0 ? 'inline-block' : 'none';
+      dialog.classList.add('visible');
+
+      function escolher(modo) {
+        modoCalculo = modo;
+        dialog.classList.remove('visible');
+        solarBtn.removeEventListener('click', onSolar);
+        classicoBtn.removeEventListener('click', onClassico);
+        displayResults();
+      }
+      function onSolar() { escolher('solar'); }
+      function onClassico() { escolher('classico'); }
+      solarBtn.addEventListener('click', onSolar);
+      classicoBtn.addEventListener('click', onClassico);
+    }
 
     function askPassword(isRetry) {
       return new Promise(function(resolve, reject) {
@@ -876,8 +938,8 @@
         uploadSubtitle.textContent = 'Clique para enviar outro arquivo';
         fileNameEl.textContent = file.name;
 
-        displayResults();
         showLoading(false);
+        askModo();
       } catch (err) {
         showLoading(false);
         if (!userCancelled) {
@@ -1111,11 +1173,11 @@
       document.getElementById('rowLeituraAtual').style.display = temLeituras ? 'flex' : 'none';
       document.getElementById('leituraAnterior').textContent = formatBR(extractedData.leituraAnterior);
       document.getElementById('leituraAtual').textContent = formatBR(extractedData.leituraAtual);
-      document.getElementById('consumoTotal').textContent = extractedData.consumo + ' kWh';
 
-      // Detalhamento da geracao solar: consumo medido (bruto) = faturado + geracao.
-      // So mostra quando ha compensacao solar; senao o consumo ja e o faturado.
-      var temGeracao = extractedData.geracao > 0 && extractedData.consumoFaturado > 0;
+      // Detalhamento da geracao solar so aparece no modo solar (consumo medido =
+      // faturado + geracao). No modo classico, mostra o consumo faturado direto.
+      var temGeracao = modoCalculo === 'solar' && extractedData.geracao > 0 && extractedData.consumoFaturado > 0;
+      document.getElementById('consumoTotal').textContent = (temGeracao ? extractedData.consumo : (extractedData.consumoFaturado || extractedData.consumo)) + ' kWh';
       document.getElementById('consumoLabel').textContent = temGeracao ? 'Consumo medido (total)' : 'Consumo Total';
       document.getElementById('rowGeracao').style.display = temGeracao ? 'flex' : 'none';
       document.getElementById('rowFaturado').style.display = temGeracao ? 'flex' : 'none';
@@ -1134,11 +1196,12 @@
       }, 100);
     }
 
-    // Quando ha geracao solar, o desconto incide apenas sobre os kWh gerados
-    // pelo solar (compensacao). Os kWh que ultrapassaram a geracao ja estao na
-    // conta da Neoenergia (total da fatura).
+    // Modo solar: o desconto incide apenas sobre os kWh gerados pelo solar
+    // (os kWh que ultrapassaram ja estao na conta da Neoenergia, somada a parte).
+    // Modo classico: usa o consumo faturado da conta (leitura comum).
     function consumoParaCalculo() {
-      return extractedData.geracao > 0 ? extractedData.geracao : extractedData.consumo;
+      if (modoCalculo === 'solar' && extractedData.geracao > 0) return extractedData.geracao;
+      return extractedData.consumoFaturado || extractedData.consumo;
     }
 
     // Trunca para 2 casas decimais (sem arredondar). As tarifas e valores sao
@@ -1157,7 +1220,7 @@
       if (!extractedData) return;
       var desconto = parseFloat(document.getElementById('desconto').value) || 0;
       var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
-      var adicionais = extractedData.totalFatura || 0;
+      var adicionais = (modoCalculo === 'solar') ? (extractedData.totalFatura || 0) : 0;
 
       var consumoCalc = consumoParaCalculo();
       var totalTaxas = valorKwh();
@@ -1194,7 +1257,7 @@
       if (!extractedData) return;
       var desconto = parseFloat(document.getElementById('desconto').value) || 0;
       var pessoas = parseInt(document.getElementById('pessoas').value, 10) || 1;
-      var adicionais = extractedData.totalFatura || 0;
+      var adicionais = (modoCalculo === 'solar') ? (extractedData.totalFatura || 0) : 0;
 
       var consumoCalc = consumoParaCalculo();
       var totalTaxas = valorKwh();
@@ -1216,12 +1279,12 @@
       if (extractedData.bandeira) msg += 'Bandeira: ' + extractedData.bandeira + '\n';
       if (extractedData.totalFatura) msg += 'Total da fatura: R$ ' + extractedData.totalFatura.toFixed(2).replace('.', ',') + '\n';
       msg += '\n';
-      if (extractedData.geracao > 0 && extractedData.consumoFaturado > 0) {
+      if (modoCalculo === 'solar' && extractedData.geracao > 0 && extractedData.consumoFaturado > 0) {
         msg += 'Consumo medido: ' + extractedData.consumo + ' kWh\n';
         msg += 'Geração solar: - ' + extractedData.geracao.toFixed(2).replace('.', ',') + ' kWh\n';
         msg += 'Consumo faturado: ' + extractedData.consumoFaturado + ' kWh\n';
       } else {
-        msg += 'Consumo: ' + extractedData.consumo + ' kWh\n';
+        msg += 'Consumo: ' + (extractedData.consumoFaturado || extractedData.consumo) + ' kWh\n';
       }
       msg += 'Taxa TUSD: R$ ' + trunc2(extractedData.taxaTusd).toFixed(2).replace('.', ',') + '\n';
       msg += 'Taxa TE: R$ ' + trunc2(extractedData.taxaTe).toFixed(2).replace('.', ',') + '\n';
