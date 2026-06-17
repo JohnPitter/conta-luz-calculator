@@ -1122,11 +1122,9 @@
       document.getElementById('geracao').textContent = '- ' + extractedData.geracao.toFixed(2).replace('.', ',') + ' kWh';
       document.getElementById('consumoFaturado').textContent = extractedData.consumoFaturado + ' kWh';
 
-      document.getElementById('taxaTusd').textContent = 'R$ ' + extractedData.taxaTusd.toFixed(4).replace('.', ',');
-      document.getElementById('taxaTe').textContent = 'R$ ' + extractedData.taxaTe.toFixed(4).replace('.', ',');
-
-      var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
-      document.getElementById('totalTaxas').textContent = 'R$ ' + totalTaxas.toFixed(4).replace('.', ',');
+      document.getElementById('taxaTusd').textContent = 'R$ ' + trunc2(extractedData.taxaTusd).toFixed(2).replace('.', ',');
+      document.getElementById('taxaTe').textContent = 'R$ ' + trunc2(extractedData.taxaTe).toFixed(2).replace('.', ',');
+      document.getElementById('totalTaxas').textContent = 'R$ ' + valorKwh().toFixed(2).replace('.', ',');
 
       recalculate();
 
@@ -1138,9 +1136,21 @@
 
     // Quando ha geracao solar, o desconto incide apenas sobre os kWh gerados
     // pelo solar (compensacao). Os kWh que ultrapassaram a geracao ja estao na
-    // conta da Neoenergia, informada em "valores adicionais".
+    // conta da Neoenergia (total da fatura).
     function consumoParaCalculo() {
       return extractedData.geracao > 0 ? extractedData.geracao : extractedData.consumo;
+    }
+
+    // Trunca para 2 casas decimais (sem arredondar). As tarifas e valores sao
+    // usados com 2 casas, como o usuario faz: ex. 0,71902 -> 0,71.
+    function trunc2(n) {
+      return Math.floor(n * 100) / 100;
+    }
+
+    // Valor do kWh usado no calculo: soma das tarifas truncadas a 2 casas
+    // (TUSD 0,71 + TE 0,35 = 1,06), nao a soma exata (1,0732).
+    function valorKwh() {
+      return trunc2(extractedData.taxaTusd) + trunc2(extractedData.taxaTe);
     }
 
     function recalculate() {
@@ -1150,9 +1160,9 @@
       var adicionais = extractedData.totalFatura || 0;
 
       var consumoCalc = consumoParaCalculo();
-      var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
-      var valorBruto = consumoCalc * totalTaxas;
-      var valorDescontoAmt = valorBruto * (desconto / 100);
+      var totalTaxas = valorKwh();
+      var valorBruto = trunc2(consumoCalc * totalTaxas);
+      var valorDescontoAmt = trunc2(valorBruto * (desconto / 100));
       var valorComDesconto = valorBruto - valorDescontoAmt;
       var valorFinal = valorComDesconto + adicionais;
       var valorPorPessoa = valorFinal / pessoas;
@@ -1187,9 +1197,9 @@
       var adicionais = extractedData.totalFatura || 0;
 
       var consumoCalc = consumoParaCalculo();
-      var totalTaxas = extractedData.taxaTusd + extractedData.taxaTe;
-      var valorBruto = consumoCalc * totalTaxas;
-      var valorDescontoAmt = valorBruto * (desconto / 100);
+      var totalTaxas = valorKwh();
+      var valorBruto = trunc2(consumoCalc * totalTaxas);
+      var valorDescontoAmt = trunc2(valorBruto * (desconto / 100));
       var valorComDesconto = valorBruto - valorDescontoAmt;
       var valorFinal = valorComDesconto + adicionais;
       var valorPorPessoa = valorFinal / pessoas;
@@ -1213,8 +1223,9 @@
       } else {
         msg += 'Consumo: ' + extractedData.consumo + ' kWh\n';
       }
-      msg += 'Taxa TUSD: R$ ' + extractedData.taxaTusd.toFixed(4).replace('.', ',') + '\n';
-      msg += 'Taxa TE: R$ ' + extractedData.taxaTe.toFixed(4).replace('.', ',') + '\n\n';
+      msg += 'Taxa TUSD: R$ ' + trunc2(extractedData.taxaTusd).toFixed(2).replace('.', ',') + '\n';
+      msg += 'Taxa TE: R$ ' + trunc2(extractedData.taxaTe).toFixed(2).replace('.', ',') + '\n';
+      msg += 'Valor do kWh: R$ ' + valorKwh().toFixed(2).replace('.', ',') + '\n\n';
       msg += 'Valor Bruto: R$ ' + valorBruto.toFixed(2) + '\n';
       msg += 'Desconto (' + desconto + '%): - R$ ' + valorDescontoAmt.toFixed(2) + '\n';
       msg += 'Valor c/ Desconto: R$ ' + valorComDesconto.toFixed(2) + '\n';
